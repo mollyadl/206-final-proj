@@ -60,7 +60,11 @@ def insert_data_from_api(api_url, limit=25):
                   int(row.get('hospitalizedCumulative', 0)), int(row.get('inIcuCurrently', 0)),
                   int(row.get('onVentilatorCurrently', 0))))
 
-            count += 1
+            # NEED to add this below
+
+            if cursor.rowcount > 0:
+                count += 1
+
             if count >= limit:
                 break
         except ValueError:
@@ -90,5 +94,3 @@ create_database()
 
 api_url = 'https://api.covidtracking.com/v1/us/daily.json'
 populate_database(api_url, total_required=100, batch_size=25)
-
-
