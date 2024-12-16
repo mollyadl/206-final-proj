@@ -5,23 +5,26 @@ from datetime import datetime
 
 
 api_request = "https://disease.sh/v3/covid-19/historical/USA?lastdays=all"
+START_DATE = 20210211
 
 def make_table(dbpath):
     conn = sqlite3.connect(dbpath)
     cursor = conn.cursor()
+
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS canadastats (
-                   date INTEGER PRIMARY KEY,
-                   cases INTEGER,
-                   deaths INTEGER,
-                   )
+        CREATE TABLE IF NOT EXISTS CanadaStats (
+            date INTEGER PRIMARY KEY,
+            cases INTEGER,
+            deaths INTEGER
+        )
     ''')
 
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS canadacases (
-                   date INTEGER PRIMARY KEY,
-                   recovered INTEGER,
-                   active INTEGER)
+        CREATE TABLE IF NOT EXISTS CanadaCases (
+            date INTEGER PRIMARY KEY,
+            recovered INTEGER,
+            active INTEGER
+        )
     ''')
 
     conn.commit()
@@ -42,14 +45,15 @@ def get_api_data():
             #used chatgpt to fix date formatting to match the other api
         reformatted_date = datetime.strptime(date, "%m/%d/%y").strftime("%Y%m%d")
         reformatted_date = int(reformatted_date)
-        
-        data_list.append({
-            'date': reformatted_date,
-            'cases': case_num,
-            'deaths': deaths.get(date),
-            'recovered': recovered.get(date),
-            'active': case_num - recovered.get(date) - deaths.get(date)    
-        })
+
+        if reformatted_date >= START_DATE:
+            data_list.append({
+                'date': reformatted_date,
+                'cases': case_num,
+                'deaths': deaths.get(date),
+                'recovered': recovered.get(date),
+                'active': case_num - recovered.get(date) - deaths.get(date)    
+            })
 
     return data_list
 
@@ -60,10 +64,15 @@ def insert_data(dbpath, data, limit = 25):
     count = 0
     for item in data:
         cursor.execute('''
-            INSERT OR IGNORE INTO canadastats (date, cases, deaths) VALUES (?, ?, ?)
+            INSERT OR IGNORE INTO CanadaStats (date, cases, deaths) VALUES (?, ?, ?)
         ''', (item['date'], item['cases'], item['deaths']))
-        count += 1
-        if data >= limit:
+
+        # NEED to add this below
+
+        if cursor.rowcount > 0:
+            count += 1
+
+        if count >= limit:
             break
 
     conn.commit()
@@ -76,27 +85,27 @@ def insert_data2(dbpath, data, limit = 25):
     count = 0
     for item in data:
         cursor.execute('''
-            INSERT OR IGNORE INTO canadacases (date, recovered, active) VALUES (?, ?, ?)
+            INSERT OR IGNORE INTO CanadaCases (date, recovered, active) VALUES (?, ?, ?)
         ''', (item['date'], item['recovered'], item['active']))
-        count += 1
-        if data >= limit:
+
+        if cursor.rowcount > 0:
+            count += 1
+        if count >= limit:
             break
 
     conn.commit()
     conn.close()
 
-def main():
-    db_path = 'covid_data.db'
-    make_table(db_path)
-    data = get_api_data()
-    insert_data(db_path, data, limit = 25)
-    insert_data2(db_path, data, limit = 25)
 
-        
+
+db_path = 'covid_data.db'
+make_table(db_path)
+data = get_api_data()
+insert_data(db_path, data, limit = 25)
+insert_data2(db_path, data, limit = 25)
+print('done')
+
     
-    pass
-
-
 
 
     #cases
