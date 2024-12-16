@@ -1,6 +1,8 @@
 
 import sqlite3
 import requests
+from datetime import datetime
+
 
 api_request = "https://disease.sh/v3/covid-19/historical/USA?lastdays=all"
 
@@ -36,8 +38,13 @@ def get_api_data():
 
     data_list = []
     for date, case_num in cases.items():
+
+            #used chatgpt to fix date formatting to match the other api
+        reformatted_date = datetime.strptime(date, "%m/%d/%y").strftime("%Y%m%d")
+        reformatted_date = int(reformatted_date)
+        
         data_list.append({
-            'date': date,
+            'date': reformatted_date,
             'cases': case_num,
             'deaths': deaths.get(date),
             'recovered': recovered.get(date),
